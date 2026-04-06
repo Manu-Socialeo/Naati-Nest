@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FF6B00; /* Vibrant orange from inspiration */
+  --color-primary-dark: #E05E00;
+  --color-background: #FFFFFF;
+  --color-surface: #F8F9FA; /* Very light gray for cards/sections */
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #71717A;
+  --color-border: #E4E4E7;
+  
+  --radius-card: 16px;
+  --radius-button: 12px;
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text-primary font-sans;
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
