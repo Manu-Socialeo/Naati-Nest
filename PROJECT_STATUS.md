@@ -1,8 +1,9 @@
 # Naati Nest — Project Status & Development Log
 
-> **Last Updated:** 2026-04-04
+> **Last Updated:** 2026-04-06
 > **Project:** Naati Nest — Authentic Non-Veg Cuisine Ordering App (AirMenu-inspired)
 > **Location:** `C:\Users\MANU\Documents\Antigravity Projects\naatinest`
+> **GitHub:** https://github.com/Manu-Socialeo/Naati-Nest
 
 ---
 
@@ -81,6 +82,30 @@ If this file exists, **read it first** before doing anything. It contains the fu
     - **Stats Dashboard** — Total tables, active, inactive, QR codes ready at a glance
     - **Search & Filter** — Quick search by table name or number
     - **Professional Card Design** — Naati Nest branding, gradient background, green border, "SCAN TO ORDER"
+
+### Phase 5 (2026-04-06 — Quick QR Generator)
+27. ✅ **Quick QR Generator** — Instant QR generation without needing database tables. Located at top of Admin → QR Codes tab.
+    - Enter table number → QR generates instantly client-side
+    - Optional label field (e.g. "Window Seat", "VIP")
+    - Shows live URL that QR links to
+    - **5 action buttons:** Print Card, Print Sticker, Download Card, Download Sticker, Copy Link
+    - QR links to `/menu?table=N` — when scanned, opens the **live, real-time updated menu** from Supabase
+    - Works without any database setup
+    - Same professional card/sticker designs as database QR codes
+
+### Phase 6 (2026-04-06 — QR Tab Complete Rebuild)
+28. ✅ **QR Tab Complete UX/UI Rebuild** — Eliminated duplicate flows and jumbled interface. New design:
+    - **Section 1: "Generate QR Code"** (green header) — Single input row: Table Number + Label + "Bulk Add Tables" button. Type number → QR appears instantly. 5 action buttons: Print Card, Print Sticker, Download Card, Download Sticker, Copy Link. "Save to Database" button appears only if table not yet saved (connects QR to order tracking).
+    - **Section 2: "Saved Tables"** — Tables stored in Supabase. Compact cards with Print, Download, Link, Edit, Hide/Show, Delete. Search bar. "Print All" button in header.
+    - **Removed:** Separate "Add Table" modal, duplicate stats cards row, print mode selection modal, scattered action buttons
+    - **Simplified flow:** Generate → Print/Download → Optionally save to DB for order tracking
+    - Bulk Add moved inline as a button in the generate section
+    - Direct print on click (no intermediate modal)
+    - Cleaner, more compact table cards
+    - Git repo initialized and pushed to GitHub: https://github.com/Manu-Socialeo/Naati-Nest
+    - Fixed index.html merge conflicts from git rebase
+    - Added dist/ to .gitignore
+    - Vercel deployment ready (vercel.json configured, build passes)
 
 ---
 
