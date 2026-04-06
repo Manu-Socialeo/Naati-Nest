@@ -19,6 +19,10 @@ if (supabaseUrl && supabaseAnonKey) {
     },
   });
 } else {
+  const noopChannel = {
+    on: () => noopChannel,
+    subscribe: () => ({ unsubscribe: () => {} }),
+  };
   _supabase = {
     from: () => ({
       select: () => Promise.resolve({ data: null, error: new Error('Supabase not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local') }),
@@ -29,7 +33,7 @@ if (supabaseUrl && supabaseAnonKey) {
       single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
       order: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
     }),
-    channel: () => ({ on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }) }),
+    channel: () => noopChannel,
     auth: { getSession: () => Promise.resolve({ data: { session: null } }) },
     storage: { from: () => ({ upload: () => Promise.resolve({ error: new Error('Supabase not configured') }), getPublicUrl: () => ({ data: { publicUrl: '' } }) }) },
   } as any;
