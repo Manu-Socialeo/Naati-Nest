@@ -64,6 +64,8 @@ export interface Order {
   cancelled_by?: string;
   scheduled_for?: string;
   tip_amount?: number;
+  coupon_discount?: number;
+  coupon_code?: string;
   table_id?: string;
   created_at: string;
 }

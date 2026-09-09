@@ -1,131 +1,366 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { MenuItem, Category } from '@/lib/types';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useCart } from '@/lib/CartContext';
 import { useAuth } from '@/lib/AuthContext';
-import { Search, Plus, Minus, ChevronRight, ChevronUp, ArrowLeft, User, Star, X, ShoppingCart, LayoutDashboard } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  Search,
+  ChevronRight,
+  ArrowLeft,
+  User,
+  X,
+  ShoppingCart,
+  LayoutDashboard,
+  Utensils,
+  ChevronUp,
+} from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MenuSkeleton } from '@/components/ui/Skeleton';
+import { MenuItemCard } from '@/components/menu/MenuItemCard';
+import { VariantModal, VegIcon, NonVegIcon } from '@/components/menu/VariantModal';
+import { formatPrice } from '@/lib/utils';
 
 const fallbackCategories: Category[] = [
-  { id: 'cat-biryani-rice', name: 'Biryani & Rice', name_kn: 'ಬಿರಿಯಾನಿ ಮತ್ತು ಅನ್ನ', sort_order: 1, created_at: new Date().toISOString() },
-  { id: 'cat-starters', name: 'Starters', name_kn: 'ಸ್ಟಾರ್ಟರ್ಸ್', sort_order: 2, created_at: new Date().toISOString() },
-  { id: 'cat-kabab-more', name: 'Kabab & More', name_kn: 'ಕಬಾಬ್ ಮತ್ತು ಇತರೆ', sort_order: 3, created_at: new Date().toISOString() },
-  { id: 'cat-combos', name: 'Combos', name_kn: 'ಕಾಂಬೊಗಳು', sort_order: 4, created_at: new Date().toISOString() },
-  { id: 'cat-idlis-dosa', name: 'Idlis & Dosa', name_kn: 'ಇಡ್ಲಿ ಮತ್ತು ದೋಸೆ', sort_order: 5, created_at: new Date().toISOString() },
+  {
+    id: 'cat-biryani-rice',
+    name: 'Biryani & Rice',
+    name_kn: 'ಬಿರಿಯಾನಿ ಮತ್ತು ಅನ್ನ',
+    sort_order: 1,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'cat-starters',
+    name: 'Starters',
+    name_kn: 'ಸ್ಟಾರ್ಟರ್ಸ್',
+    sort_order: 2,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'cat-kabab-more',
+    name: 'Kabab & More',
+    name_kn: 'ಕಬಾಬ್ ಮತ್ತು ಇತರೆ',
+    sort_order: 3,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'cat-combos',
+    name: 'Combos',
+    name_kn: 'ಕಾಂಬೊಗಳು',
+    sort_order: 4,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'cat-idlis-dosa',
+    name: 'Idlis & Dosa',
+    name_kn: 'ಇಡ್ಲಿ ಮತ್ತು ದೋಸೆ',
+    sort_order: 5,
+    created_at: new Date().toISOString(),
+  },
 ];
 
 const fallbackMenuItems: MenuItem[] = [
-  // Biryani & Rice
-  { id: 'br1', category_id: 'cat-biryani-rice', name: 'Chicken Biryani', name_kn: 'ಚಿಕನ್ ಬಿರಿಯಾನಿ', price: 129, image_url: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, is_bestseller: true, rating: 4.8, rating_count: '5K+', has_variants: false },
-  { id: 'br2', category_id: 'cat-biryani-rice', name: 'Mutton Biryani', name_kn: 'ಮಟನ್ ಬಿರಿಯಾನಿ', price: 269, image_url: 'https://images.unsplash.com/photo-1633945274405-b6c80a919169?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, is_bestseller: true, rating: 4.7, rating_count: '3.5K+', has_variants: false },
-  { id: 'br3', category_id: 'cat-biryani-rice', name: 'Biryani Rice', name_kn: 'ಬಿರಿಯಾನಿ ಅನ್ನ', price: 79, image_url: 'https://images.unsplash.com/photo-1536304993881-460e32f50a14?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, rating: 4.5, rating_count: '4.7K+', has_variants: false },
-  { id: 'br4', category_id: 'cat-biryani-rice', name: 'Chicken Leg Piece Biryani', name_kn: 'ಚಿಕನ್ ಲೆಗ್ ಪೀಸ್ ಬಿರಿಯಾನಿ', price: 169, image_url: 'https://images.unsplash.com/photo-1606491956689-2ea866880049?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, is_todays_special: true, rating: 4.6, rating_count: '1.2K+', has_variants: false },
-
-  // Starters
-  { id: 's1', category_id: 'cat-starters', name: 'Chicken Chops', name_kn: 'ಚಿಕನ್ ಚಾಪ್ಸ್', price: 129, image_url: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-  { id: 's2', category_id: 'cat-starters', name: 'Chilly Chicken', name_kn: 'ಚಿಲ್ಲಿ ಚಿಕನ್', price: 129, image_url: 'https://images.unsplash.com/photo-1610057099443-fde6c99db9e1?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-  { id: 's3', category_id: 'cat-starters', name: 'Chicken Fry', name_kn: 'ಚಿಕನ್ ಫ್ರೈ', price: 129, image_url: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-  { id: 's4', category_id: 'cat-starters', name: 'Guntur Chicken', name_kn: 'ಗುಂಟೂರು ಚಿಕನ್', price: 129, image_url: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-  { id: 's5', category_id: 'cat-starters', name: 'Lemon Chicken', name_kn: 'ಲೆಮನ್ ಚಿಕನ್', price: 129, image_url: 'https://images.unsplash.com/photo-1525755662997-8b74394b95c6?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-  { id: 's6', category_id: 'cat-starters', name: 'Pepper Chicken', name_kn: 'ಪೆಪ್ಪರ್ ಚಿಕನ್', price: 129, image_url: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-  { id: 's7', category_id: 'cat-starters', name: 'Chicken Sukka', name_kn: 'ಚಿಕನ್ ಸುಕ್ಕಾ', price: 129, image_url: 'https://images.unsplash.com/photo-1567171466295-4afa63d45416?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-
-  // Kabab & More
-  { id: 'k1', category_id: 'cat-kabab-more', name: 'Kabab', name_kn: 'ಕಬಾಬ್', price: 110, image_url: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 60 }, { id: 'full', name: 'Full', price: 110 }] },
-  { id: 'k2', category_id: 'cat-kabab-more', name: 'Lollipop', name_kn: 'ಲಾಲಿಪಾಪ್', price: 129, image_url: 'https://images.unsplash.com/photo-1562967916-eb82221dfb44?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: true, variants: [{ id: 'half', name: 'Half', price: 79 }, { id: 'full', name: 'Full', price: 129 }] },
-
-  // Combos
-  { id: 'cb1', category_id: 'cat-combos', name: 'Chicken Combo', name_kn: 'ಚಿಕನ್ ಕಾಂಬೊ', price: 159, image_url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, is_bestseller: true, has_variants: false },
-  { id: 'cb2', category_id: 'cat-combos', name: 'Mutton Combo', name_kn: 'ಮಟನ್ ಕಾಂಬೊ', price: 229, image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: false },
-  { id: 'cb3', category_id: 'cat-combos', name: 'Biryani Rice Combo', name_kn: 'ಬಿರಿಯಾನಿ ಅನ್ನದ ಕಾಂಬೊ', price: 129, image_url: 'https://images.unsplash.com/photo-1580476262798-bddd9f4b7369?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: false, has_variants: false },
-
-  // Idlis & Dosa
-  { id: 'id1', category_id: 'cat-idlis-dosa', name: 'Dosa', name_kn: 'ದೋಸೆ', price: 25, image_url: 'https://images.unsplash.com/photo-1630383249896-424e484df924?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: true, has_variants: false },
-  { id: 'id2', category_id: 'cat-idlis-dosa', name: 'Idli', name_kn: 'ಇಡ್ಲಿ', price: 25, image_url: 'https://images.unsplash.com/photo-1589301773859-b9af2f36a26e?q=80&w=400&auto=format&fit=crop', is_available: true, total_ordered: 0, created_at: new Date().toISOString(), is_veg: true, has_variants: false },
+  {
+    id: 'br1',
+    category_id: 'cat-biryani-rice',
+    name: 'Chicken Biryani',
+    name_kn: 'ಚಿಕನ್ ಬಿರಿಯಾನಿ',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    is_bestseller: true,
+    rating: 4.8,
+    rating_count: '5K+',
+    has_variants: false,
+  },
+  {
+    id: 'br2',
+    category_id: 'cat-biryani-rice',
+    name: 'Mutton Biryani',
+    name_kn: 'ಮಟನ್ ಬಿರಿಯಾನಿ',
+    price: 269,
+    image_url:
+      'https://images.unsplash.com/photo-1633945274405-b6c80a919169?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    is_bestseller: true,
+    rating: 4.7,
+    rating_count: '3.5K+',
+    has_variants: false,
+  },
+  {
+    id: 'br3',
+    category_id: 'cat-biryani-rice',
+    name: 'Biryani Rice',
+    name_kn: 'ಬಿರಿಯಾನಿ ಅನ್ನ',
+    price: 79,
+    image_url:
+      'https://images.unsplash.com/photo-1536304993881-460e32f50a14?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    rating: 4.5,
+    rating_count: '4.7K+',
+    has_variants: false,
+  },
+  {
+    id: 'br4',
+    category_id: 'cat-biryani-rice',
+    name: 'Chicken Leg Piece Biryani',
+    name_kn: 'ಚಿಕನ್ ಲೆಗ್ ಪೀಸ್ ಬಿರಿಯಾನಿ',
+    price: 169,
+    image_url:
+      'https://images.unsplash.com/photo-1606491956689-2ea866880049?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    is_todays_special: true,
+    rating: 4.6,
+    rating_count: '1.2K+',
+    has_variants: false,
+  },
+  {
+    id: 's1',
+    category_id: 'cat-starters',
+    name: 'Chicken Chops',
+    name_kn: 'ಚಿಕನ್ ಚಾಪ್ಸ್',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 's2',
+    category_id: 'cat-starters',
+    name: 'Chilly Chicken',
+    name_kn: 'ಚಿಲ್ಲಿ ಚಿಕನ್',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1610057099443-fde6c99db9e1?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 's3',
+    category_id: 'cat-starters',
+    name: 'Chicken Fry',
+    name_kn: 'ಚಿಕನ್ ಫ್ರೈ',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 's4',
+    category_id: 'cat-starters',
+    name: 'Guntur Chicken',
+    name_kn: 'ಗುಂಟೂರು ಚಿಕನ್',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 's5',
+    category_id: 'cat-starters',
+    name: 'Lemon Chicken',
+    name_kn: 'ಲೆಮನ್ ಚಿಕನ್',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1525755662997-8b74394b95c6?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 's6',
+    category_id: 'cat-starters',
+    name: 'Pepper Chicken',
+    name_kn: 'ಪೆಪ್ಪರ್ ಚಿಕನ್',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1585937421612-70a008356fbe?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 's7',
+    category_id: 'cat-starters',
+    name: 'Chicken Sukka',
+    name_kn: 'ಚಿಕನ್ ಸುಕ್ಕಾ',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1567171466295-4afa63d45416?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 'k1',
+    category_id: 'cat-kabab-more',
+    name: 'Kabab',
+    name_kn: 'ಕಬಾಬ್',
+    price: 110,
+    image_url:
+      'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 60 },
+      { id: 'full', name: 'Full', price: 110 },
+    ],
+  },
+  {
+    id: 'k2',
+    category_id: 'cat-kabab-more',
+    name: 'Lollipop',
+    name_kn: 'ಲಾಲಿಪಾಪ್',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1562967916-eb82221dfb44?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: true,
+    variants: [
+      { id: 'half', name: 'Half', price: 79 },
+      { id: 'full', name: 'Full', price: 129 },
+    ],
+  },
+  {
+    id: 'cb1',
+    category_id: 'cat-combos',
+    name: 'Chicken Combo',
+    name_kn: 'ಚಿಕನ್ ಕಾಂಬೊ',
+    price: 159,
+    image_url:
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    is_bestseller: true,
+    has_variants: false,
+  },
+  {
+    id: 'cb2',
+    category_id: 'cat-combos',
+    name: 'Mutton Combo',
+    name_kn: 'ಮಟನ್ ಕಾಂಬೊ',
+    price: 229,
+    image_url:
+      'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: false,
+  },
+  {
+    id: 'cb3',
+    category_id: 'cat-combos',
+    name: 'Biryani Rice Combo',
+    name_kn: 'ಬಿರಿಯಾನಿ ಅನ್ನದ ಕಾಂಬೊ',
+    price: 129,
+    image_url:
+      'https://images.unsplash.com/photo-1580476262798-bddd9f4b7369?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: false,
+    has_variants: false,
+  },
+  {
+    id: 'id1',
+    category_id: 'cat-idlis-dosa',
+    name: 'Dosa',
+    name_kn: 'ದೋಸೆ',
+    price: 25,
+    image_url:
+      'https://images.unsplash.com/photo-1630383249896-424e484df924?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: true,
+    has_variants: false,
+  },
+  {
+    id: 'id2',
+    category_id: 'cat-idlis-dosa',
+    name: 'Idli',
+    name_kn: 'ಇಡ್ಲಿ',
+    price: 25,
+    image_url:
+      'https://images.unsplash.com/photo-1589301773859-b9af2f36a26e?q=80&w=400&auto=format&fit=crop',
+    is_available: true,
+    total_ordered: 0,
+    created_at: new Date().toISOString(),
+    is_veg: true,
+    has_variants: false,
+  },
 ];
-
-const VegIcon = () => (
-  <div className="w-4 h-4 border border-green-600 flex items-center justify-center rounded-sm bg-white">
-    <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-  </div>
-);
-
-const NonVegIcon = () => (
-  <div className="w-4 h-4 border border-red-600 flex items-center justify-center rounded-sm bg-white">
-    <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-red-600"></div>
-  </div>
-);
-
-const VariantModal = ({ item, onClose, onAdd }: { item: MenuItem, onClose: () => void, onAdd: (item: MenuItem, variant: any) => void }) => {
-  const { language } = useLanguage();
-  const itemName = language === 'en' ? item.name : item.name_kn;
-  const [selectedVariantId, setSelectedVariantId] = useState<string>(item.variants?.[0]?.id || '');
-
-  if (!item.variants || item.variants.length === 0) return null;
-
-  const handleAdd = () => {
-    const variant = item.variants?.find(v => v.id === selectedVariantId);
-    if (variant) {
-      onAdd(item, variant);
-      onClose();
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-white w-full sm:w-[400px] rounded-t-2xl sm:rounded-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
-        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              {item.is_veg ? <VegIcon /> : <NonVegIcon />}
-            </div>
-            <h3 className="font-bold text-gray-800 text-lg">Customise {itemName}</h3>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <X size={20} className="text-gray-500" />
-          </button>
-        </div>
-        <div className="p-4">
-          <p className="text-sm font-bold text-gray-800 mb-3">Quantity</p>
-          <div className="space-y-3">
-            {item.variants.map((variant) => (
-              <label key={variant.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="relative flex items-center justify-center w-5 h-5">
-                    <input
-                      type="radio"
-                      name="variant"
-                      value={variant.id}
-                      checked={selectedVariantId === variant.id}
-                      onChange={() => setSelectedVariantId(variant.id)}
-                      className="appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-[#1e9e62] transition-colors"
-                    />
-                    {selectedVariantId === variant.id && (
-                      <div className="absolute w-2.5 h-2.5 bg-[#1e9e62] rounded-full"></div>
-                    )}
-                  </div>
-                  <span className="font-medium text-gray-800">{variant.name}</span>
-                </div>
-                <span className="font-bold text-gray-800">₹{variant.price}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-100 bg-gray-50">
-          <button
-            onClick={handleAdd}
-            className="w-full bg-[#1e9e62] text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition-colors shadow-sm"
-          >
-            Add Item - ₹{item.variants.find(v => v.id === selectedVariantId)?.price}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const MenuPage = () => {
   const { language, t } = useLanguage();
@@ -139,6 +374,7 @@ export const MenuPage = () => {
     if (tableId) localStorage.setItem('naatinest_table_id', tableId);
     else localStorage.removeItem('naatinest_table_id');
   }, [tableId]);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,12 +385,17 @@ export const MenuPage = () => {
   const [todaysSpecialOnly, setTodaysSpecialOnly] = useState(false);
   const [selectedItemForVariant, setSelectedItemForVariant] = useState<MenuItem | null>(null);
   const [tableLabel, setTableLabel] = useState<string | null>(null);
+  const [activeCategoryTab, setActiveCategoryTab] = useState<string>('all');
 
   useEffect(() => {
     const fetchTable = async () => {
       if (!tableId) return;
       try {
-        const { data } = await supabase.from('tables').select('label, table_number').eq('id', tableId).single() as any;
+        const { data } = (await supabase
+          .from('tables')
+          .select('label, table_number')
+          .eq('id', tableId)
+          .single()) as any;
         if (data) setTableLabel(data.label || 'Table ' + data.table_number);
       } catch {}
     };
@@ -167,10 +408,11 @@ export const MenuPage = () => {
       try {
         const { data: catData } = await supabase.from('categories').select('*').order('sort_order');
         const { data: itemData } = await supabase.from('menu_items').select('*');
-        
-        const finalCategories = catData && catData.length > 0 ? catData : fallbackCategories;
+
+        const finalCategories =
+          catData && catData.length > 0 ? catData : fallbackCategories;
         const finalItems = itemData && itemData.length > 0 ? itemData : fallbackMenuItems;
-        
+
         setCategories(finalCategories);
         setMenuItems(finalItems);
       } catch (error) {
@@ -183,231 +425,246 @@ export const MenuPage = () => {
     fetchData();
   }, []);
 
-  // Get suggested items (items not in cart)
+  // Suggested items for upsell
   const suggestedItems = useMemo(() => {
     const inCartIds = new Set(items.map(i => i.id));
     return menuItems.filter(item => !inCartIds.has(item.id)).slice(0, 5);
   }, [items, menuItems]);
 
-  const renderItemCard = (item: MenuItem, isSmall = false) => {
-    const itemCartItems = items.filter(i => i.id === item.id);
-    const totalQuantity = itemCartItems.reduce((acc, i) => acc + i.quantity, 0);
-    const itemName = language === 'en' ? item.name : (item.name_kn || item.name);
-    const itemDesc = language === 'en' ? (item.description || '') : (item.description_kn || item.description || '');
+  const totalCartCount = items.reduce((acc, i) => acc + i.quantity, 0);
+  const totalCartAmount = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
-    const handleAddClick = () => {
-      if (item.variants && item.variants.length > 0) {
-        setSelectedItemForVariant(item);
-      } else {
-        addItem(item);
-      }
-    };
-
-    const handleDecrementClick = () => {
-      const cartItem = itemCartItems[itemCartItems.length - 1]; // Remove the most recently added variant
-      if (cartItem) decrementItem(cartItem.cartItemId);
-    };
-
-    if (isSmall) {
-      return (
-        <div key={item.id} className="min-w-[280px] max-w-[280px] bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex gap-3 snap-start relative">
-          <div className="flex-1 flex flex-col">
-            <div className="flex items-center gap-1.5 mb-1">
-               {item.is_veg ? <VegIcon /> : <NonVegIcon />}
-               {item.is_bestseller && <span className="text-[#d9534f] text-[10px] font-bold flex items-center"><Star size={8} className="mr-0.5 fill-[#d9534f]"/> Bestseller</span>}
-            </div>
-            <h4 className="font-bold text-gray-800 text-sm line-clamp-2 leading-tight">{itemName}</h4>
-            <p className="text-gray-600 text-sm mt-1">₹{item.price}</p>
-          </div>
-          <div className="relative w-24 h-24 flex-shrink-0">
-            <img src={item.image_url} alt={itemName} className="w-full h-full object-cover rounded-xl" />
-            <button 
-              onClick={handleAddClick}
-              className="absolute -bottom-2 -right-2 bg-white shadow-md rounded-xl p-1.5 text-[#1e9e62] border border-gray-100 hover:bg-gray-50 transition-colors"
-            >
-               <Plus size={20} strokeWidth={2.5} />
-               {totalQuantity > 0 && (
-                 <span className="absolute -top-2 -right-2 bg-[#1e9e62] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                   {totalQuantity}
-                 </span>
-               )}
-            </button>
-          </div>
-        </div>
-      );
+  const handleAddClick = (item: MenuItem) => {
+    if (item.variants && item.variants.length > 0) {
+      setSelectedItemForVariant(item);
+    } else {
+      addItem(item);
     }
+  };
 
-    return (
-      <div key={item.id} className="flex gap-4 p-4 border-b border-gray-100 bg-white last:border-0 relative">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            {item.is_veg ? <VegIcon /> : <NonVegIcon />}
-            {item.is_bestseller && <span className="text-[#d9534f] text-xs font-bold flex items-center"><Star size={10} className="mr-0.5 fill-[#d9534f]"/> Bestseller</span>}
-          </div>
-          <h3 className="font-bold text-gray-800 text-lg leading-tight">{itemName}</h3>
-          <p className="text-gray-800 mt-2">₹{item.price}</p>
-        </div>
-        <div className="relative w-36 h-32 flex-shrink-0">
-          <img src={item.image_url} alt={itemName} className="w-full h-full object-cover rounded-2xl" />
-          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <div className="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200 w-28 h-10 flex items-center justify-center">
-              {totalQuantity > 0 ? (
-                <div className="flex items-center justify-between w-full px-2 text-[#1e9e62] font-extrabold text-lg">
-                  <button onClick={handleDecrementClick} className="p-1 hover:bg-green-50 rounded flex-1 flex justify-center">
-                    <Minus size={18} strokeWidth={3} />
-                  </button>
-                  <span className="w-6 text-center">{totalQuantity}</span>
-                  <button onClick={handleAddClick} className="p-1 hover:bg-green-50 rounded flex-1 flex justify-center">
-                    <Plus size={18} strokeWidth={3} />
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={handleAddClick} 
-                  className="w-full h-full text-[#1e9e62] font-extrabold text-center uppercase hover:bg-green-50 transition-colors text-sm tracking-wide"
-                >
-                  ADD
-                </button>
-              )}
-            </div>
-            {item.variants && item.variants.length > 0 && (
-              <span className="text-[10px] text-gray-500 mt-1 font-medium bg-white/80 px-1 rounded">Customisable</span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const handleDecrementClick = (item: MenuItem) => {
+    const itemCartItems = items.filter(i => i.id === item.id);
+    const cartItem = itemCartItems[itemCartItems.length - 1];
+    if (cartItem) decrementItem(cartItem.cartItemId);
+  };
+
+  const scrollToCategory = (categoryId: string) => {
+    setActiveCategoryTab(categoryId);
+    if (categoryId === 'all') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const el = document.getElementById(`cat-section-${categoryId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white pb-28">
+    <div className="min-h-screen bg-background pb-32">
       {/* Table Banner */}
       {tableLabel && (
-        <div className="bg-[#1e9e62] text-white text-center py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 sticky top-0 z-30">
+        <div className="bg-primary text-white text-center py-2.5 px-4 text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 sticky top-0 z-30 shadow-xs tracking-wide">
           <span>📍 {tableLabel} — Dine-in</span>
         </div>
       )}
+
       {/* Top Header */}
-      <header className={`${tableLabel ? '' : 'sticky top-0 z-20 '}bg-white`}>
-        <div className="flex items-center gap-3 p-3">
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <ArrowLeft size={24} className="text-gray-700" />
+      <header className={`${tableLabel ? '' : 'sticky top-0 z-20 '}bg-white border-b border-surface-border shadow-xs`}>
+        <div className="flex items-center gap-3 p-3.5 max-w-4xl mx-auto">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="p-2 hover:bg-surface-subtle rounded-xl transition-colors cursor-pointer text-text-primary"
+            title="Back to home"
+          >
+            <ArrowLeft size={22} />
           </button>
-          <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 border border-transparent focus-within:border-gray-300 focus-within:bg-white transition-all">
+
+          {/* Search Bar */}
+          <div className="flex-1 flex items-center gap-2 bg-surface-subtle rounded-xl px-3.5 py-2 border border-surface-border/80 focus-within:border-primary focus-within:bg-white transition-all">
+            <Search className="text-text-muted shrink-0" size={18} />
             <input
               type="text"
-              placeholder={t.search_placeholder}
-              className="bg-transparent border-none outline-none w-full text-gray-800 placeholder:text-gray-500 text-sm"
+              placeholder={t.search_placeholder || 'Search biryani, starters, kababs...'}
+              className="bg-transparent border-none outline-none w-full text-text-primary placeholder:text-text-muted text-sm font-medium"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
             />
-            <Search className="text-gray-500 flex-shrink-0" size={20} />
-          </div>
-          <div className="flex items-center gap-2">
-            {user?.role === 'admin' && (
-              <button 
-                onClick={() => navigate('/admin')}
-                className="p-2 bg-orange-100 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors"
-                title={t.admin_dashboard}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-text-muted hover:text-text-primary p-0.5"
               >
-                <LayoutDashboard size={20} />
+                <X size={16} />
               </button>
             )}
-            <button 
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="p-2.5 bg-primary-light text-primary rounded-xl hover:bg-primary-muted transition-colors cursor-pointer"
+                title={t.admin_dashboard || 'Admin Dashboard'}
+              >
+                <LayoutDashboard size={18} />
+              </button>
+            )}
+            <button
+              type="button"
               onClick={() => navigate('/orders')}
-              className="p-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors"
+              className="p-2.5 bg-surface-subtle text-text-secondary rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+              title="My Orders"
             >
-              <User size={20} />
+              <User size={18} />
             </button>
-            <button 
+            <button
+              type="button"
               onClick={() => navigate('/cart')}
-              className="p-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors relative"
+              className="p-2.5 bg-primary text-white rounded-xl hover:bg-primary-hover transition-colors relative cursor-pointer shadow-xs"
+              title="View Cart"
             >
-              <ShoppingCart size={20} />
-              {items.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-[#e23744] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                  {items.reduce((acc, i) => acc + i.quantity, 0)}
+              <ShoppingCart size={18} />
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                  {totalCartCount}
                 </span>
               )}
             </button>
           </div>
         </div>
 
-        {/* Filter Chips */}
-        <div className="flex items-center gap-3 px-4 py-3 overflow-x-auto hide-scrollbar border-b border-gray-100">
+        {/* Filter Chips Row */}
+        <div className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto hide-scrollbar border-t border-surface-border/60 max-w-4xl mx-auto">
           {/* Veg Toggle */}
-          <button 
+          <button
+            type="button"
             onClick={() => setVegOnly(!vegOnly)}
-            className={`flex items-center px-2 py-1.5 border rounded-xl shadow-sm transition-colors ${vegOnly ? 'border-green-700 bg-green-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+            className={`flex items-center gap-2 px-3 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              vegOnly
+                ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-2xs'
+                : 'border-surface-border bg-white text-text-secondary hover:bg-surface-subtle'
+            }`}
           >
-            <div className={`relative w-8 h-3.5 rounded-full flex items-center transition-colors ${vegOnly ? 'bg-green-200' : 'bg-gray-200'}`}>
-              <div className={`absolute w-5 h-5 bg-white border-2 border-green-700 rounded flex items-center justify-center shadow-sm transition-transform ${vegOnly ? 'right-0 translate-x-1' : '-left-1'}`}>
-                <div className="w-2 h-2 bg-green-700 rounded-full"></div>
-              </div>
-            </div>
+            <VegIcon />
+            <span>Pure Veg</span>
           </button>
 
           {/* Non-Veg Toggle */}
-          <button 
+          <button
+            type="button"
             onClick={() => setNonVegOnly(!nonVegOnly)}
-            className={`flex items-center px-2 py-1.5 border rounded-xl shadow-sm transition-colors ${nonVegOnly ? 'border-[#e23744] bg-red-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+            className={`flex items-center gap-2 px-3 py-1.5 border rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              nonVegOnly
+                ? 'border-rose-600 bg-rose-50 text-rose-800 shadow-2xs'
+                : 'border-surface-border bg-white text-text-secondary hover:bg-surface-subtle'
+            }`}
           >
-            <div className={`relative w-8 h-3.5 rounded-full flex items-center transition-colors ${nonVegOnly ? 'bg-red-200' : 'bg-gray-200'}`}>
-              <div className={`absolute w-5 h-5 bg-white border-2 border-[#e23744] rounded flex items-center justify-center shadow-sm transition-transform ${nonVegOnly ? 'right-0 translate-x-1' : '-left-1'}`}>
-                <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] border-b-[#e23744]"></div>
-              </div>
-            </div>
+            <NonVegIcon />
+            <span>Non-Veg</span>
           </button>
 
           {/* Bestseller */}
-          <button 
+          <button
+            type="button"
             onClick={() => setBestsellerOnly(!bestsellerOnly)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-sm font-medium shadow-sm whitespace-nowrap transition-colors ${
-              bestsellerOnly 
-                ? 'border-[#e46c35] text-[#e46c35] bg-[#fff5f0] hover:bg-[#ffe8dd]' 
-                : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              bestsellerOnly
+                ? 'border-amber-500 text-amber-800 bg-amber-50 shadow-2xs'
+                : 'border-surface-border text-text-secondary bg-white hover:bg-surface-subtle'
             }`}
           >
-            {t.bestseller} {bestsellerOnly && <X size={14} strokeWidth={3} />}
+            <span>{t.bestseller || 'Bestseller'}</span>
+            {bestsellerOnly && <X size={12} strokeWidth={3} />}
           </button>
 
           {/* Today's Special */}
-          <button 
+          <button
+            type="button"
             onClick={() => setTodaysSpecialOnly(!todaysSpecialOnly)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-sm font-medium shadow-sm whitespace-nowrap transition-colors ${
-              todaysSpecialOnly 
-                ? 'border-primary text-primary bg-orange-50 hover:bg-orange-100' 
-                : 'border-gray-200 text-gray-700 bg-white hover:bg-gray-50'
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              todaysSpecialOnly
+                ? 'border-primary text-primary bg-primary-light shadow-2xs'
+                : 'border-surface-border text-text-secondary bg-white hover:bg-surface-subtle'
             }`}
           >
-            {t.todays_special} {todaysSpecialOnly && <X size={14} strokeWidth={3} />}
+            <span>{t.todays_special || "Chef's Special"}</span>
+            {todaysSpecialOnly && <X size={12} strokeWidth={3} />}
           </button>
+        </div>
+
+        {/* Categories Quick Navigation Pills */}
+        <div className="flex items-center gap-1.5 px-4 py-2 overflow-x-auto hide-scrollbar border-t border-surface-border/40 bg-surface-subtle/50 max-w-4xl mx-auto">
+          <button
+            type="button"
+            onClick={() => scrollToCategory('all')}
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+              activeCategoryTab === 'all'
+                ? 'bg-primary text-white shadow-2xs'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            All Items
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => scrollToCategory(cat.id)}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                activeCategoryTab === cat.id
+                  ? 'bg-primary text-white shadow-2xs'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {language === 'en' ? cat.name : cat.name_kn || cat.name}
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* Suggested Items Section (Only show if items in cart) */}
+      {/* Suggested Items Drawer (Upsell when cart is not empty) */}
       {items.length > 0 && suggestedItems.length > 0 && (
-        <div className="bg-gray-50 pt-4 pb-6 px-4 border-b border-gray-200">
-          <h2 className="text-lg font-extrabold text-gray-800 mb-4 flex items-center justify-between">
-            {t.suggested_title}
-            <ChevronUp size={24} className="text-gray-500" />
+        <div className="bg-emerald-50/40 py-4 px-4 border-b border-emerald-100 max-w-4xl mx-auto">
+          <h2 className="text-xs font-extrabold text-emerald-900 mb-3 uppercase tracking-wider flex items-center justify-between">
+            <span>{t.suggested_title || 'Customers Also Ordered'}</span>
+            <span className="text-[10px] text-emerald-700 font-semibold lowercase">frequently paired</span>
           </h2>
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x hide-scrollbar">
-            {suggestedItems.map(item => renderItemCard(item, true))}
+          <div className="flex gap-3 overflow-x-auto pb-2 snap-x hide-scrollbar">
+            {suggestedItems.map(item => {
+              const itemCartItems = items.filter(i => i.id === item.id);
+              const qty = itemCartItems.reduce((acc, i) => acc + i.quantity, 0);
+              return (
+                <MenuItemCard
+                  key={item.id}
+                  item={item}
+                  isSmall={true}
+                  totalQuantity={qty}
+                  onAddClick={handleAddClick}
+                  onDecrementClick={handleDecrementClick}
+                  language={language}
+                />
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Main Menu List */}
-      <main className="bg-white">
+      <main className="max-w-4xl mx-auto bg-white border-x border-surface-border shadow-xs min-h-[70vh]">
         {loading && <MenuSkeleton />}
         {!loading && (
           <>
             {categories.map(category => {
               const categoryItems = menuItems.filter(item => {
                 const matchesCategory = item.category_id === category.id;
-                const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || (item.name_kn || '').includes(searchQuery);
-                
+                const matchesSearch =
+                  item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (item.name_kn || '').includes(searchQuery);
+
                 if (!matchesCategory || !matchesSearch) return false;
 
                 if (vegOnly && !nonVegOnly && item.is_veg !== true) return false;
@@ -428,44 +685,83 @@ export const MenuPage = () => {
 
                 return true;
               });
-              
+
               if (categoryItems.length === 0) return null;
 
               return (
-                <div key={category.id} className="pt-6">
-                  <h2 className="px-4 text-xl font-extrabold text-gray-800 mb-2">
-                    {language === 'en' ? category.name : category.name_kn} ({categoryItems.length})
-                  </h2>
-                  <div className="flex flex-col">
-                    {categoryItems.map(item => renderItemCard(item))}
+                <section
+                  key={category.id}
+                  id={`cat-section-${category.id}`}
+                  className="scroll-mt-36"
+                >
+                  <div className="px-4 py-3.5 bg-surface-subtle/70 border-y border-surface-border/80 flex items-center justify-between">
+                    <h2 className="text-base sm:text-lg font-extrabold text-gray-900 tracking-tight">
+                      {language === 'en' ? category.name : category.name_kn || category.name}
+                    </h2>
+                    <span className="text-xs font-bold text-text-muted bg-white px-2 py-0.5 rounded-full border border-surface-border">
+                      {categoryItems.length}
+                    </span>
                   </div>
-                  <div className="h-4 bg-gray-100 w-full mt-4 border-t border-b border-gray-200" />
-                </div>
+                  <div className="divide-y divide-surface-border/50">
+                    {categoryItems.map(item => {
+                      const itemCartItems = items.filter(i => i.id === item.id);
+                      const qty = itemCartItems.reduce((acc, i) => acc + i.quantity, 0);
+                      return (
+                        <MenuItemCard
+                          key={item.id}
+                          item={item}
+                          totalQuantity={qty}
+                          onAddClick={handleAddClick}
+                          onDecrementClick={handleDecrementClick}
+                          language={language}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
               );
             })}
-            
+
             {/* Empty State for Search */}
-            {menuItems.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()) || (item.name_kn || '').includes(searchQuery)).length === 0 && (
-              <div className="p-8 text-center text-gray-500">
-                <p>{t.no_items_found} "{searchQuery}"</p>
+            {menuItems.filter(
+              item =>
+                item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (item.name_kn || '').includes(searchQuery)
+            ).length === 0 && (
+              <div className="p-16 text-center text-text-muted">
+                <Utensils size={40} className="mx-auto text-gray-300 mb-3" />
+                <p className="font-semibold text-text-secondary">No dishes found</p>
+                <p className="text-xs text-text-muted mt-1">
+                  Try searching for another dish or clear filter chips.
+                </p>
               </div>
             )}
           </>
         )}
       </main>
 
-      {/* Sticky Cart Banner */}
+      {/* Floating Bottom Cart Bar */}
       {items.length > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-30">
-          <button 
+        <div className="fixed bottom-5 left-4 right-4 z-40 max-w-md mx-auto">
+          <button
+            type="button"
             onClick={() => navigate('/cart')}
-            className="w-full bg-[#1e9e62] text-white p-4 rounded-xl shadow-xl flex justify-between items-center hover:bg-[#188050] transition-colors"
+            className="w-full bg-primary text-white p-4 rounded-2xl shadow-elevated flex justify-between items-center hover:bg-primary-hover transition-all cursor-pointer border border-primary-border/30 active:scale-[0.99]"
           >
-            <div className="font-bold text-lg">
-              {items.reduce((acc, i) => acc + i.quantity, 0)} {t.items_added}
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <span className="bg-white/20 text-white text-xs font-black px-2 py-0.5 rounded-md">
+                  {totalCartCount} {totalCartCount === 1 ? 'ITEM' : 'ITEMS'}
+                </span>
+                <span className="text-lg font-black">{formatPrice(totalCartAmount)}</span>
+              </div>
+              <p className="text-[11px] text-white/80 font-medium mt-0.5">
+                Plus taxes & charges
+              </p>
             </div>
-            <div className="flex items-center gap-1 font-bold text-lg">
-              {t.view_cart} <ChevronRight size={20} />
+            <div className="flex items-center gap-1 font-extrabold text-sm tracking-wide uppercase bg-white/20 hover:bg-white/30 px-3.5 py-2 rounded-xl transition-colors">
+              <span>{t.view_cart || 'View Cart'}</span>
+              <ChevronRight size={16} strokeWidth={3} />
             </div>
           </button>
         </div>

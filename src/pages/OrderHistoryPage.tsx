@@ -79,33 +79,38 @@ export const OrderHistoryPage = () => {
       case 'completed':
       case 'served':
         return (
-          <div className="flex items-center gap-1 text-[#1e9e62] font-bold text-sm">
-            {t.delivered} <CheckCircle2 size={16} className="fill-[#1e9e62] text-white" />
-          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <CheckCircle2 size={14} className="text-emerald-600" />
+            {t.delivered}
+          </span>
         );
       case 'cancelled':
         return (
-          <div className="flex items-center gap-1 text-[#d9534f] font-bold text-sm">
-            {t.cancelled} <XCircle size={16} className="fill-[#d9534f] text-white" />
-          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            <XCircle size={14} className="text-rose-600" />
+            {t.cancelled}
+          </span>
         );
       case 'preparing':
         return (
-          <div className="flex items-center gap-1 text-[#e46c35] font-bold text-sm">
-            {t.preparing} <ChefHat size={16} />
-          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+            <ChefHat size={14} className="text-amber-600" />
+            {t.preparing}
+          </span>
         );
       case 'ready':
         return (
-          <div className="flex items-center gap-1 text-blue-500 font-bold text-sm">
-            {t.ready || 'Ready'} <CheckCircle2 size={16} />
-          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <CheckCircle2 size={14} className="text-blue-600" />
+            {t.ready || 'Ready'}
+          </span>
         );
       default:
         return (
-          <div className="flex items-center gap-1 text-blue-500 font-bold text-sm">
-            {t.pending} <Clock size={16} />
-          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+            <Clock size={14} className="text-slate-500" />
+            {t.pending}
+          </span>
         );
     }
   };
@@ -163,48 +168,48 @@ export const OrderHistoryPage = () => {
 
       <div className="p-4 space-y-4">
         {/* User Profile Section */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-4">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-              <User size={32} />
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-bold shadow-inner border border-primary/20">
+              <User size={30} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">{user?.full_name || 'Guest User'}</h1>
-              <p className="text-sm text-gray-500">{t.member_since} {user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear()}</p>
+              <h1 className="text-xl font-black text-slate-900">{user?.full_name || 'Guest User'}</h1>
+              <p className="text-xs text-slate-500 font-medium">{t.member_since} {user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear()}</p>
             </div>
           </div>
           
           {/* CRM Stats */}
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center p-3 bg-blue-50 rounded-xl">
-              <p className="text-xl font-extrabold text-blue-600">{customerStats.totalOrders}</p>
-              <p className="text-[10px] text-blue-500 font-bold uppercase">Orders</p>
+            <div className="text-center p-3 bg-blue-50/70 border border-blue-100 rounded-2xl">
+              <p className="text-xl font-black text-blue-700">{customerStats.totalOrders}</p>
+              <p className="text-[10px] text-blue-600 font-black uppercase tracking-wider">Orders</p>
             </div>
-            <div className="text-center p-3 bg-green-50 rounded-xl">
-              <p className="text-xl font-extrabold text-green-600">₹{customerStats.totalSpent}</p>
-              <p className="text-[10px] text-green-500 font-bold uppercase">Total Spent</p>
+            <div className="text-center p-3 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
+              <p className="text-xl font-black text-emerald-700">₹{customerStats.totalSpent}</p>
+              <p className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">Total Spent</p>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded-xl">
-              <p className="text-sm font-extrabold text-purple-600 truncate">{customerStats.favouriteItem || '—'}</p>
-              <p className="text-[10px] text-purple-500 font-bold uppercase">Favourite</p>
+            <div className="text-center p-3 bg-amber-50/70 border border-amber-100 rounded-2xl">
+              <p className="text-sm font-black text-amber-700 truncate">{customerStats.favouriteItem || '—'}</p>
+              <p className="text-[10px] text-amber-600 font-black uppercase tracking-wider">Favourite</p>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 text-gray-700">
-              <div className="p-2 bg-gray-50 rounded-lg">
-                <Phone size={18} className="text-gray-500" />
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div className="p-2 bg-white rounded-lg shadow-xs">
+                <Phone size={16} className="text-slate-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t.enter_phone}</p>
-                <p className="text-sm font-medium">{user?.phone || 'Not provided'}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.enter_phone}</p>
+                <p className="text-sm font-semibold text-slate-800">{user?.phone || 'Not provided'}</p>
               </div>
             </div>
 
             {user?.role === 'admin' && (
               <button 
                 onClick={() => navigate('/admin')}
-                className="w-full mt-4 flex items-center justify-center gap-2 p-3 bg-primary text-white rounded-xl font-bold shadow-sm hover:opacity-90 transition-opacity"
+                className="w-full mt-3 flex items-center justify-center gap-2 p-3 bg-primary text-white rounded-xl font-bold shadow-md shadow-primary/20 hover:bg-emerald-800 transition-colors"
               >
                 {t.admin_dashboard}
               </button>
@@ -212,28 +217,28 @@ export const OrderHistoryPage = () => {
 
             <button 
               onClick={handleLogout}
-              className="w-full mt-2 flex items-center justify-center gap-2 p-3 bg-gray-50 text-red-600 rounded-xl font-bold border border-red-100 hover:bg-red-50 transition-colors"
+              className="w-full mt-2 flex items-center justify-center gap-2 p-3 bg-rose-50/60 text-rose-600 rounded-xl font-bold border border-rose-100 hover:bg-rose-100 transition-colors"
             >
-              <LogOut size={18} />
+              <LogOut size={16} />
               {t.logout}
             </button>
           </div>
         </div>
 
-        <h3 className="font-bold text-gray-900 text-lg px-1">{t.past_orders}</h3>
+        <h3 className="font-extrabold text-slate-900 text-lg px-1">{t.past_orders}</h3>
 
         {loading ? (
           <OrdersSkeleton />
         ) : orders.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShoppingBag size={32} className="text-gray-400" />
+          <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <div className="w-20 h-20 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+              <ShoppingBag size={32} className="text-primary" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">{t.no_orders}</h3>
-            <p className="text-gray-500">Looks like you haven't placed any orders.</p>
+            <h3 className="text-lg font-black text-slate-900 mb-1">{t.no_orders}</h3>
+            <p className="text-slate-500 text-sm">Looks like you haven't placed any orders yet.</p>
             <button 
               onClick={() => navigate('/menu')}
-              className="mt-6 bg-[#1e9e62] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-colors shadow-sm"
+              className="mt-6 bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-800 transition-colors shadow-md shadow-primary/20"
             >
               {t.start_ordering}
             </button>
@@ -384,7 +389,7 @@ export const OrderHistoryPage = () => {
               {/* Reorder Button */}
               <button 
                 onClick={handleReorder}
-                className="w-full bg-orange-50 text-orange-600 font-bold py-3 rounded-xl flex items-center justify-center gap-1 hover:bg-orange-100 transition-colors"
+                className="w-full bg-primary/10 text-primary font-bold py-3 rounded-xl flex items-center justify-center gap-1 hover:bg-primary/15 transition-colors"
               >
                 REORDER <ChevronRight size={18} />
               </button>
@@ -400,7 +405,7 @@ export const OrderHistoryPage = () => {
         )}
         
         {orders.length > 0 && (
-          <div className="py-4 flex justify-center items-center gap-1 text-orange-600 font-bold text-sm cursor-pointer">
+          <div className="py-4 flex justify-center items-center gap-1 text-primary font-bold text-sm cursor-pointer hover:underline">
             VIEW MORE ORDERS <ChevronRight size={16} className="rotate-90" />
           </div>
         )}

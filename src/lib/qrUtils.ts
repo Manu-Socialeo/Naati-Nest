@@ -8,7 +8,7 @@ export const generateQRDataUrl = async (
     bgColor?: string;
   }
 ): Promise<string> => {
-  const { size = 300, color = '#1e9e62', bgColor = '#ffffff' } = options || {};
+  const { size = 300, color = '#15803d', bgColor = '#ffffff' } = options || {};
 
   return QRCode.toDataURL(text, {
     width: size,
@@ -30,7 +30,7 @@ export const generateQRCanvas = async (
     bgColor?: string;
   }
 ): Promise<void> => {
-  const { size = 300, color = '#1e9e62', bgColor = '#ffffff' } = options || {};
+  const { size = 300, color = '#15803d', bgColor = '#ffffff' } = options || {};
 
   return new Promise((resolve, reject) => {
     QRCode.toCanvas(canvas, text, {
