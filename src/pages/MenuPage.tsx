@@ -516,10 +516,17 @@ export const MenuPage = () => {
             <button
               type="button"
               onClick={() => navigate('/orders')}
-              className="p-2.5 bg-surface-subtle text-text-secondary rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-              title="My Orders"
+              className={`p-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
+                user ? 'bg-primary/10 text-primary font-bold' : 'bg-surface-subtle text-text-secondary hover:bg-gray-100'
+              }`}
+              title={user ? `Logged in as ${user.full_name}` : 'My Account & Orders'}
             >
               <User size={18} />
+              {user && (
+                <span className="text-xs font-bold max-w-[70px] truncate hidden sm:inline">
+                  {user.full_name.split(' ')[0]}
+                </span>
+              )}
             </button>
             <button
               type="button"

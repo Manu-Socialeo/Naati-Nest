@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { ChevronLeft, ChevronRight, Sparkles, UtensilsCrossed, ShieldCheck, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, UtensilsCrossed, ShieldCheck, Flame, User } from 'lucide-react';
 
 export const LandingPage = () => {
+  const { user } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const [banners, setBanners] = useState<any[]>([]);
@@ -197,17 +199,33 @@ export const LandingPage = () => {
             onClick={() => navigate('/menu')}
             className="w-full text-base py-4 shadow-xl shadow-primary/30 font-extrabold tracking-wide"
           >
-            {t.start_ordering}
+            {user ? 'Browse Menu & Order' : t.start_ordering}
           </Button>
-          <Button
-            size="lg"
-            variant="outlined"
-            onClick={() => navigate('/login')}
-            className="w-full text-base py-4 bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 hover:text-white"
-          >
-            Staff & Admin Login
-          </Button>
+          {user ? (
+            <Button
+              size="lg"
+              variant="outlined"
+              onClick={() => navigate('/orders')}
+              className="w-full text-base py-4 bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 hover:text-white"
+            >
+              My Account & Orders
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              variant="outlined"
+              onClick={() => navigate('/login')}
+              className="w-full text-base py-4 bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 hover:text-white"
+            >
+              Sign In / Staff
+            </Button>
+          )}
         </div>
+        {user && (
+          <p className="mt-3 text-xs text-white/70 font-medium">
+            Welcome back, <span className="font-bold text-emerald-300">{user.full_name}</span> (+91 {user.phone})
+          </p>
+        )}
       </main>
 
       {/* Footer */}

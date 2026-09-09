@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/lib/CartContext';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatPrice } from '@/lib/utils';
+import { Input } from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -16,10 +17,13 @@ import {
   CreditCard,
   Trash2,
   CheckCircle,
+  CheckCircle2,
   Utensils,
   Clock,
+  User,
+  Phone,
 } from 'lucide-react';
-import { MenuItem, CartItem } from '@/lib/types';
+import { MenuItem, CartItem, Profile } from '@/lib/types';
 import { motion } from 'motion/react';
 import { VegIcon, NonVegIcon } from '@/components/menu/VariantModal';
 
@@ -119,11 +123,14 @@ const EditVariantModal = ({
 };
 
 export const CartPage = () => {
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const { t, language } = useLanguage();
   const { items, addItem, decrementItem, removeItem, updateItemVariant, clearCart } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [customerName, setCustomerName] = useState(user?.full_name || '');
+  const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
+  const [isEditingDetails, setIsEditingDetails] = useState(!user?.phone);
   const [itemToCustomize, setItemToCustomize] = useState<CartItem | null>(null);
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway' | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('online');
@@ -137,6 +144,14 @@ export const CartPage = () => {
   const orderTypeRef = useRef<HTMLDivElement>(null);
 
   const tableId = localStorage.getItem('naatinest_table_id');
+
+  useEffect(() => {
+    if (user?.phone) {
+      setCustomerName(user.full_name || '');
+      setCustomerPhone(user.phone || '');
+      setIsEditingDetails(false);
+    }
+  }, [user]);
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const parcelCharge = orderType === 'takeaway' ? 10 : 0;
@@ -168,6 +183,22 @@ export const CartPage = () => {
   };
 
   const placeOrder = async () => {
+    const nameToUse = (customerName || user?.full_name || '').trim();
+    const rawPhone = (customerPhone || user?.phone || '').replace(/\D/g, '');
+    const phoneToUse = rawPhone.length === 12 && rawPhone.startsWith('91') ? rawPhone.slice(2) : rawPhone;
+
+    if (!nameToUse || nameToUse.length < 2) {
+      toast.error('Please enter your full name (at least 2 characters)');
+      setIsEditingDetails(true);
+      return;
+    }
+
+    if (!phoneToUse || phoneToUse.length !== 10) {
+      toast.error('Please enter a valid 10-digit mobile phone number');
+      setIsEditingDetails(true);
+      return;
+    }
+
     if (!orderType) {
       setIsShaking(true);
       orderTypeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -178,6 +209,39 @@ export const CartPage = () => {
 
     setLoading(true);
     try {
+      // 1. Save permanently in browser storage so customer never has to enter again
+      const userProfile: Profile = {
+        id: user?.id || `cust-${Date.now()}`,
+        user_id: user?.user_id || `cust-${Date.now()}`,
+        full_name: nameToUse,
+        phone: phoneToUse,
+        email: `${nameToUse.toLowerCase().replace(/\s+/g, '.')}@naatinest.app`,
+        role: user?.role || 'customer',
+        visit_count: (user?.visit_count || 0) + 1,
+        first_visit: user?.first_visit || new Date().toISOString(),
+        last_visit: new Date().toISOString(),
+        total_spent: user?.total_spent || 0,
+        total_orders: (user?.total_orders || 0) + 1,
+        favourite_item: user?.favourite_item || '',
+        created_at: user?.created_at || new Date().toISOString(),
+      };
+      login(userProfile);
+
+      // 2. Persist customer profile in backend database (Supabase) for dashboard / CRM
+      try {
+        await supabase.from('profiles').upsert(
+          {
+            full_name: nameToUse,
+            phone: phoneToUse,
+            role: 'customer',
+            last_visit: new Date().toISOString(),
+          } as any,
+          { onConflict: 'phone' }
+        );
+      } catch (e) {
+        console.warn('Backend profile sync note:', e);
+      }
+
       let orderId = `mock-${Date.now()}`;
       const token = Math.floor(100 + Math.random() * 900).toString();
 
@@ -194,8 +258,8 @@ export const CartPage = () => {
         parcel_charge: parcelCharge,
         order_type: orderType,
         status: 'pending',
-        customer_name: user?.full_name || 'Guest',
-        customer_phone: user?.phone || 'N/A',
+        customer_name: nameToUse,
+        customer_phone: phoneToUse,
         customer_id: null,
         table_id: tableId || null,
         token: token,
@@ -384,6 +448,77 @@ export const CartPage = () => {
                 </button>
               </div>
             </motion.div>
+
+            {/* Customer Contact Details */}
+            {user?.phone && !isEditingDetails ? (
+              <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold shadow-xs">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-emerald-900 uppercase tracking-wider">
+                        Customer Details
+                      </span>
+                      <span className="text-[10px] bg-emerald-100/90 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                        Saved
+                      </span>
+                    </div>
+                    <p className="font-extrabold text-slate-900 text-sm mt-0.5">{user.full_name}</p>
+                    <p className="text-xs font-mono text-slate-600">+91 {user.phone}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingDetails(true)}
+                  className="text-xs font-bold text-primary hover:text-emerald-900 underline px-2 py-1 cursor-pointer"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-4 border border-surface-border shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <User size={15} className="text-primary" />
+                    Customer Details (Required) *
+                  </h3>
+                  {user?.phone && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDetails(false)}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-800"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <Input
+                    label="Your Full Name"
+                    icon={<User size={16} />}
+                    placeholder="e.g. Anand Kumar"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    label="10-Digit Mobile Number"
+                    icon={<Phone size={16} />}
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    value={customerPhone}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setCustomerPhone(val);
+                    }}
+                    helperText="Saved in your browser — you won't need to enter it again"
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Cart Items List */}
             <div className="bg-white rounded-2xl shadow-xs p-4 border border-surface-border">

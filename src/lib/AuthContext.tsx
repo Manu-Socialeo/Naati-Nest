@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { Profile } from './types';
 
-const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SESSION_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000; // 365 days (1 year)
 
 const AuthContext = createContext<{
   user: Profile | null;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useAuth } from '@/lib/AuthContext';
 import { Profile } from '@/lib/types';
@@ -81,6 +82,22 @@ export const LoginPage = () => {
       };
       
       login(userProfile as any);
+
+      // Persist profile to backend database for CRM / dashboard analytics
+      try {
+        await supabase.from('profiles').upsert(
+          {
+            full_name: sanitizedName,
+            phone: sanitizedPhone,
+            role: isAdmin ? 'admin' : 'customer',
+            last_visit: new Date().toISOString(),
+          } as any,
+          { onConflict: 'phone' }
+        );
+      } catch (e) {
+        console.warn('Backend profile upsert note:', e);
+      }
+
       navigate(isAdmin ? '/admin' : '/menu');
     } catch {
       toast.error('Login failed. Please try again.');
