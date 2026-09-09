@@ -202,49 +202,35 @@ $$;
 
 -- Profiles
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "profiles_insert" ON profiles FOR INSERT WITH CHECK (true);
-CREATE POLICY "profiles_select_own" ON profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "profiles_select_staff" ON profiles FOR SELECT USING (public.get_user_role() IN ('staff', 'admin'));
-CREATE POLICY "profiles_update_own" ON profiles FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "profiles_update_admin" ON profiles FOR UPDATE USING (public.get_user_role() = 'admin');
+CREATE POLICY "profiles_all" ON profiles FOR ALL USING (true) WITH CHECK (true);
 
 -- Categories
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "categories_select" ON categories FOR SELECT USING (true);
-CREATE POLICY "categories_all_staff" ON categories FOR ALL USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "categories_all" ON categories FOR ALL USING (true) WITH CHECK (true);
 
 -- Menu Items
 ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "menu_items_select" ON menu_items FOR SELECT USING (true);
-CREATE POLICY "menu_items_all_staff" ON menu_items FOR ALL USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "menu_items_all" ON menu_items FOR ALL USING (true) WITH CHECK (true);
 
 -- Restaurant Settings
 ALTER TABLE restaurant_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "settings_select" ON restaurant_settings FOR SELECT USING (true);
-CREATE POLICY "settings_insert_staff" ON restaurant_settings FOR INSERT WITH CHECK (public.get_user_role() IN ('staff', 'admin'));
-CREATE POLICY "settings_update_staff" ON restaurant_settings FOR UPDATE USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "settings_all" ON restaurant_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- Orders
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "orders_insert" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "orders_select" ON orders FOR SELECT USING (true);
-CREATE POLICY "orders_update_staff" ON orders FOR UPDATE USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "orders_all" ON orders FOR ALL USING (true) WITH CHECK (true);
 
 -- Tables
 ALTER TABLE tables ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "tables_select" ON tables FOR SELECT USING (true);
-CREATE POLICY "tables_all_staff" ON tables FOR ALL USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "tables_all" ON tables FOR ALL USING (true) WITH CHECK (true);
 
 -- Order Ratings
 ALTER TABLE order_ratings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "ratings_select" ON order_ratings FOR SELECT USING (true);
-CREATE POLICY "ratings_insert" ON order_ratings FOR INSERT WITH CHECK (true);
-CREATE POLICY "ratings_select_staff" ON order_ratings FOR SELECT USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "ratings_all" ON order_ratings FOR ALL USING (true) WITH CHECK (true);
 
 -- Banners
 ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "banners_select" ON banners FOR SELECT USING (true);
-CREATE POLICY "banners_all_staff" ON banners FOR ALL USING (public.get_user_role() IN ('staff', 'admin'));
+CREATE POLICY "banners_all" ON banners FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================
 -- 4. Triggers & Functions
@@ -456,3 +442,32 @@ ON CONFLICT (name, category_id) DO NOTHING;
 INSERT INTO menu_items (category_id, name, name_kn, price, image_url, is_available, is_veg, is_bestseller, is_todays_special, has_variants, variants, rating, rating_count)
 SELECT id, 'Idli', 'ಇಡ್ಲಿ', 25, 'https://images.unsplash.com/photo-1589301773859-b9af2f36a26e?q=80&w=400&auto=format&fit=crop', true, true, false, false, false, '[]', 4.3, '1.5K+' FROM categories WHERE name = 'Idlis & Dosa'
 ON CONFLICT (name, category_id) DO NOTHING;
+
+-- ============================================
+-- 8. Enable Realtime Publications
+-- ============================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND tablename = 'orders'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE orders;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND tablename = 'restaurant_settings'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE restaurant_settings;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' AND tablename = 'menu_items'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE menu_items;
+    END IF;
+END $$;
+

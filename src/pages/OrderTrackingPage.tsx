@@ -41,14 +41,48 @@ export const OrderTrackingPage = () => {
           .select('*')
           .eq('id', id)
           .single();
-        if (error) throw error;
-        setOrder(data);
-      } catch (error) {
-        toast.error('Order not found');
+        if (!error && data) {
+          setOrder(data);
+          return;
+        }
+      } catch {
+        // Fallback to local store
       }
+
+      // Check local storage
+      try {
+        const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+        const found = localOrders.find(o => o.id === id);
+        if (found) {
+          setOrder(found);
+          return;
+        }
+      } catch {}
+
+      toast.error('Order not found');
     };
     fetchOrder();
 
+    // 1. Cross-tab & local storage update listener
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'naatinest_orders' || !e.key) {
+        try {
+          const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+          const found = localOrders.find(o => o.id === id);
+          if (found) {
+            setOrder(prev => {
+              if (prev && prev.status !== found.status) {
+                toast.success(`Order status updated to: ${found.status}`);
+              }
+              return found;
+            });
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 2. Supabase Realtime Channel
     const channel = supabase
       .channel(`order_${id}`)
       .on(
@@ -62,6 +96,7 @@ export const OrderTrackingPage = () => {
       .subscribe();
 
     return () => {
+      window.removeEventListener('storage', handleStorage);
       channel?.unsubscribe();
     };
   }, [id]);

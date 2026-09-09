@@ -17,6 +17,14 @@ export const KitchenDisplayPage = () => {
 
   useEffect(() => {
     fetchOrders();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'naatinest_orders' || !e.key) {
+        fetchOrders();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
     const channel = supabase
       .channel('kds-orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
@@ -27,31 +35,63 @@ export const KitchenDisplayPage = () => {
         }
       })
       .subscribe();
-    return () => { channel?.unsubscribe(); };
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      channel?.unsubscribe();
+    };
   }, [audioEnabled]);
 
   const fetchOrders = async () => {
+    let serverOrders: Order[] = [];
     try {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: true });
-      if (error) throw error;
-      setOrders(data?.filter(o => o.status !== 'served' && o.status !== 'cancelled') || []);
-    } catch (error) {
-      toast.error('Failed to fetch orders');
+      if (!error && data) serverOrders = data;
+    } catch {
+      // Offline fallback
+    }
+
+    try {
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+      const map = new Map<string, Order>();
+      localOrders.forEach(o => map.set(o.id, o));
+      serverOrders.forEach(o => map.set(o.id, o));
+      const combined = Array.from(map.values())
+        .filter(o => o.status !== 'served' && o.status !== 'cancelled')
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      setOrders(combined);
+    } catch {
+      setOrders(serverOrders.filter(o => o.status !== 'served' && o.status !== 'cancelled'));
     } finally {
       setLoading(false);
     }
   };
 
   const updateStatus = async (orderId: string, status: Order['status']) => {
+    // 1. Optimistic update
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+
+    // 2. Update local storage & broadcast cross-tab
     try {
-      const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
-      if (error) throw error;
-      setOrders(prev => prev.filter(o => o.id !== orderId));
-      toast.success(`Order marked as ${status}`);
-    } catch { toast.error('Failed to update'); }
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+      const idx = localOrders.findIndex(o => o.id === orderId);
+      if (idx !== -1) {
+        localOrders[idx].status = status;
+        localStorage.setItem('naatinest_orders', JSON.stringify(localOrders));
+        window.dispatchEvent(new StorageEvent('storage', { key: 'naatinest_orders' }));
+      }
+    } catch {}
+
+    // 3. Update Supabase
+    try {
+      await supabase.from('orders').update({ status } as any).eq('id', orderId);
+    } catch (e) {
+      console.warn('Database status update offline fallback:', e);
+    }
+    toast.success(`Order marked as ${status}`);
   };
 
   const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');

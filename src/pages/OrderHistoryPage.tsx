@@ -31,16 +31,41 @@ export const OrderHistoryPage = () => {
     if (authLoading) return;
 
     const fetchOrders = async () => {
+      let serverOrders: Order[] = [];
       try {
         let query = supabase.from('orders').select('*').order('created_at', { ascending: false });
         if (user?.phone) {
           query = query.eq('customer_phone', user.phone);
         }
         const { data, error } = await query;
-        if (error) throw error;
-        setOrders(data || []);
-      } catch (error) {
-        toast.error('Failed to fetch orders');
+        if (!error && data) serverOrders = data;
+      } catch {
+        // Fallback to local store
+      }
+
+      try {
+        const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+        const userLocalOrders = user?.phone
+          ? localOrders.filter(o => o.customer_phone === user.phone)
+          : localOrders;
+
+        const map = new Map<string, Order>();
+        userLocalOrders.forEach(o => map.set(o.id, o));
+        serverOrders.forEach(o => map.set(o.id, o));
+        const merged = Array.from(map.values()).sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setOrders(merged);
+
+        // Compute CRM stats if server stats empty
+        const totalSpent = merged.reduce((s, o) => s + o.total_amount, 0);
+        setCustomerStats(prev => ({
+          totalOrders: merged.length,
+          totalSpent: totalSpent,
+          favouriteItem: prev.favouriteItem || merged[0]?.items?.[0]?.name || '',
+        }));
+      } catch {
+        setOrders(serverOrders);
       } finally {
         setLoading(false);
       }
@@ -51,8 +76,17 @@ export const OrderHistoryPage = () => {
     const fetchStats = async () => {
       if (!user?.phone) return;
       try {
-        const { data } = await supabase.from('profiles').select('total_orders, total_spent, favourite_item').eq('phone', user.phone).single() as any;
-        if (data) setCustomerStats({ totalOrders: data.total_orders || 0, totalSpent: data.total_spent || 0, favouriteItem: data.favourite_item || '' });
+        const { data } = (await supabase
+          .from('profiles')
+          .select('total_orders, total_spent, favourite_item')
+          .eq('phone', user.phone)
+          .single()) as any;
+        if (data)
+          setCustomerStats({
+            totalOrders: data.total_orders || 0,
+            totalSpent: data.total_spent || 0,
+            favouriteItem: data.favourite_item || '',
+          });
       } catch {}
       try {
         const { data } = await supabase.from('order_ratings').select('order_id');
@@ -60,6 +94,14 @@ export const OrderHistoryPage = () => {
       } catch {}
     };
     fetchStats();
+
+    // Cross-tab storage listener
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'naatinest_orders' || !e.key) {
+        fetchOrders();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
 
     const channel = supabase
       .channel('order-updates-customer')
@@ -71,7 +113,10 @@ export const OrderHistoryPage = () => {
       })
       .subscribe();
 
-    return () => { channel?.unsubscribe(); };
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      channel?.unsubscribe();
+    };
   }, [authLoading, user]);
 
   const getStatusDisplay = (status: string) => {

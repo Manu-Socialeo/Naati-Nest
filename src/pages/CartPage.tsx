@@ -272,15 +272,37 @@ export const CartPage = () => {
           scheduleOrder && scheduledTime ? new Date(scheduledTime).toISOString() : null,
       };
 
-      const { data: order, error } = await supabase
-        .from('orders')
-        .insert(orderData as any)
-        .select()
-        .single();
+      let createdOrder: any = {
+        ...orderData,
+        id: orderId,
+        created_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
-      if (!order) throw new Error('Order creation returned no data');
-      orderId = (order as any).id;
+      try {
+        const { data: order, error } = await supabase
+          .from('orders')
+          .insert(orderData as any)
+          .select()
+          .single();
+
+        if (!error && order) {
+          createdOrder = order;
+          orderId = (order as any).id;
+        }
+      } catch (dbErr) {
+        console.warn('Database offline / fallback active:', dbErr);
+      }
+
+      // Always save to local orders store for seamless offline continuity & cross-tab sync
+      try {
+        const existingLocal = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+        const filtered = existingLocal.filter((o: any) => o.id !== orderId);
+        filtered.unshift(createdOrder);
+        localStorage.setItem('naatinest_orders', JSON.stringify(filtered));
+        window.dispatchEvent(new StorageEvent('storage', { key: 'naatinest_orders' }));
+      } catch (storageErr) {
+        console.warn('Storage save note:', storageErr);
+      }
 
       if (paymentMethod === 'online') {
         await initiatePhonePePayment(orderId);

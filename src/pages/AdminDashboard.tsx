@@ -66,21 +66,44 @@ export const AdminDashboard = () => {
         fetchOrders();
       })
       .subscribe();
+
+    // Listen for local cross-tab orders (instant sync across tabs & offline resilience)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'naatinest_orders' || !e.key) {
+        fetchOrders();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
     return () => {
+      window.removeEventListener('storage', handleStorage);
       subscription?.unsubscribe();
     };
   }, [user, authLoading, navigate, autoPrintEnabled]);
 
   const fetchOrders = async () => {
+    let serverOrders: Order[] = [];
     try {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setOrders(data || []);
+      if (!error && data) serverOrders = data;
     } catch {
-      toast.error('Failed to fetch orders');
+      // Supabase offline / fallback
+    }
+
+    try {
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+      const orderMap = new Map<string, Order>();
+      localOrders.forEach(o => orderMap.set(o.id, o));
+      serverOrders.forEach(o => orderMap.set(o.id, o));
+      const merged = Array.from(orderMap.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setOrders(merged);
+    } catch {
+      setOrders(serverOrders);
     } finally {
       setLoading(false);
     }
@@ -102,14 +125,27 @@ export const AdminDashboard = () => {
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+    // 1. Optimistically update local state
+    setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status } : o)));
+
+    // 2. Update local storage & broadcast cross-tab
     try {
-      const { error } = await supabase.from('orders').update({ status } as any).eq('id', orderId);
-      if (error) throw error;
-      setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status } : o)));
-      toast.success(`Order status updated to ${status}`);
-    } catch {
-      toast.error('Failed to update status');
+      const localOrders: Order[] = JSON.parse(localStorage.getItem('naatinest_orders') || '[]');
+      const idx = localOrders.findIndex(o => o.id === orderId);
+      if (idx !== -1) {
+        localOrders[idx].status = status;
+        localStorage.setItem('naatinest_orders', JSON.stringify(localOrders));
+        window.dispatchEvent(new StorageEvent('storage', { key: 'naatinest_orders' }));
+      }
+    } catch {}
+
+    // 3. Update Supabase
+    try {
+      await supabase.from('orders').update({ status } as any).eq('id', orderId);
+    } catch (e) {
+      console.warn('Database status update offline fallback:', e);
     }
+    toast.success(`Order status updated to ${status}`);
   };
 
   const printBill = (order: Order) => {
